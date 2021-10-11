@@ -7,12 +7,18 @@ class UIConfig():
     def __init__(self, description='Description',
                  button_text='Submit',
                  placeholder='Default placeholder',
-                 show_example_form=False):
+                 show_example_form=False,
+                 log_airtable = False):
         self.description = description
         self.button_text = button_text
         self.placeholder = placeholder
         self.show_example_form = show_example_form
+        self.log_airtable = log_airtable
 
+    def get_logging(self):
+        "Returns if logging is enabled or not"
+        return self.log_airtable
+        
     def get_description(self):
         """Returns the input of the example."""
         return self.description

@@ -2,14 +2,17 @@ import React from "react";
 import { Form, Button, Row, Col } from "react-bootstrap";
 import axios from "axios";
 import { debounce } from "lodash";
-
+import ReactModal from 'react-modal';
+import RatingComponent from "./components/Rating"
 import "bootstrap/dist/css/bootstrap.min.css";
+import Rating from "react-rating";
 
 const UI_PARAMS_API_URL = "/params";
 const TRANSLATE_API_URL = "/translate";
 const EXAMPLE_API_URL = "/examples";
 const RECORD_API_URL = "/record"
 const DEBOUNCE_INPUT = 250;
+const RANDOM_NUM_URL = "https://reqres.in/api/users/2"
 
 class App extends React.Component {
   constructor(props) {
@@ -23,13 +26,18 @@ class App extends React.Component {
       examples: {},
       currentDateTime: Date().toLocaleString(),
       demoID: "TESTID",
-      recorded: "",
-      sa_score: 11
+      logged: "",
+      showModal: false,
+      likes: 0,
+      dislikes: 0,
+      userRating: 11
     };
+
     // Bind the event handlers
     this.handleInputChange = this.handleInputChange.bind(this);
     this.handleClick = this.handleClick.bind(this);
-    
+    this.handleOpenModal = this.handleOpenModal.bind(this);
+    this.handleCloseModal = this.handleCloseModal.bind(this);  
   }
 
   componentDidMount() {
@@ -55,11 +63,37 @@ class App extends React.Component {
       );
   }
 
+  handleGetLikes () {
+    this.setState({ likes: 50 })
+  }
+
+  handleGetDislikes () {
+    this.setState({ dislikes: 25 })
+  }
+
+  handleOpenModal () {
+    this.setState({ showModal: true })
+  }
+
   updateExample(id, body) {
     axios.put(`${EXAMPLE_API_URL}/${id}`, body);
   }
 
+ 
   debouncedUpdateExample = debounce(this.updateExample, DEBOUNCE_INPUT);
+
+  async handleCloseModal () {
+    let postBody = {
+      demoID: this.state.demoID,
+      essay: this.state.input,
+      mlScore: parseInt(this.state.output),
+      userRating: this.state.userRating
+    };
+    
+    const response = await axios.post(RECORD_API_URL, postBody);
+    this.setState({ logged: true })
+    this.setState({ showModal: false })
+  }
 
   handleExampleChange = (id, field) => e => {
     const text = e.target.value;
@@ -72,12 +106,21 @@ class App extends React.Component {
     this.debouncedUpdateExample(id, body);
   };
 
+  handleUserRatingChange = (rating) => {
+    this.setState({ userRating: rating }, () => {
+      this.handleCloseModal()
+      //console.log("Changing userRating state:" + this.state.userRating + "- Rating:" + rating)
+    });
+    console.log("Curretin userRating state:" + this.state.userRating)
+  };
+
   handleExampleDelete = id => e => {
     e.preventDefault();
     axios.delete(`${EXAMPLE_API_URL}/${id}`).then(({ data: examples }) => {
       this.setState({ examples });
     });
   };
+
 
   handleExampleAdd = e => {
     e.preventDefault();
@@ -98,15 +141,12 @@ class App extends React.Component {
     await axios.post(TRANSLATE_API_URL, body).then(({ data: { text } }) => {
       this.setState({ output: text });
     });
+    // TESTING ENDPOINT
+    // await axios.post(RANDOM_NUM_URL).then(({ data: { id } }) => {
+    //   this.setState({ output: id });
+    // });
 
-    let postBody = {
-      demoID: this.state.demoID,
-      essay: this.state.input,
-      ml_score: parseInt(this.state.output),
-      sa_score: this.state.sa_score
-    };
-    const response = await axios.post(RECORD_API_URL, postBody);
-    //this.setState({recorded: "True"})
+    this.handleOpenModal()
   }
 
   render() {
@@ -114,9 +154,9 @@ class App extends React.Component {
     return (
       <div>
         <head />
-        <body style={{ alignItems: "center", justifyContent: "center" }}>
+        <body style = {{ alignItems: "center", justifyContent: "center" }}>
           <div
-            style={{
+            style = {{
               margin: "auto",
               marginTop: "80px",
               display: "block",
@@ -125,6 +165,42 @@ class App extends React.Component {
               width: "50%",
             }}
           >
+            <ReactModal 
+              style = {{
+                overlay: {
+                  margin: 'auto',
+                  position: 'absolute',
+                  backgroundColor: 'rgba(255, 255, 255, 0.75)',
+                  borderRadius: "5px",
+                  padding: "50px",
+                },
+                content: {
+                  position: 'absolute',
+                  top: "50%",
+                  left: "50%",
+                  marginTop: "-50px",
+                  transform: "translate(-50%, -50%)",
+                }
+              }}
+              isOpen={this.state.showModal}
+              contentLabel="onRequestClose Example"
+              //onRequestClose={this.handleCloseModal}
+              shouldCloseOnOverlayClick={false}
+              ariaHideApp={false}
+            >
+              <p style = {{textAlign: "center"}} >Your essay score:</p>
+              <h2 style = {{textAlign: "center"}} > {this.state.output} </h2>
+              <RatingComponent
+                  updateLikedBands={ this.handleGetDislikes }
+                  likes= { this.state.likes }
+                  dislikes = { this.state.dislikes } 
+                  initialRating = { parseInt(this.state.output) }
+                  getUserRating = { this.handleUserRatingChange }
+                  parentCallback =  { this.handleCloseModal }
+              />
+              <button onClick={this.handleCloseModal}>Grade another</button>
+            </ReactModal>
+
             <Form onSubmit={this.handleClick}>
               <Form.Group controlId="formBasicEmail">
                 {showExampleForm && (
@@ -215,15 +291,16 @@ class App extends React.Component {
                 {this.state.buttonText}
               </Button>
             </Form>
-            <div
+            {/* <div
               style={{
                 textAlign: "center",
                 margin: "20px",
+                marginBottom: "100px",
                 fontSize: "18pt"
               }}
             >
               {this.state.output}
-            </div>
+            </div> */}
             <div
               style={{
                 textAlign: "center",
@@ -231,7 +308,6 @@ class App extends React.Component {
                 fontSize: "12pt"
               }}
             >
-              {this.state.recorded}
             </div>
           </div>
         </body>

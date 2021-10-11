@@ -4,12 +4,11 @@ from http import HTTPStatus
 import json
 import subprocess
 import openai
-
 from flask import Flask, request, Response
-
 from .gpt import set_openai_key, Example
 from .ui_config import UIConfig
 import os 
+
 CONFIG_VAR = "OPENAI_CONFIG"
 KEY_NAME = "OPENAI_KEY"
 MODEL_NAME = "MODEL"
